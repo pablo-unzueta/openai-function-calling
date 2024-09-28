@@ -38,7 +38,7 @@ async def chat(request: Message):
             raise HTTPException(status_code=500, detail="OpenAI API key not set")
 
         response = client.chat.completions.create(
-            model="gpt-4-0613",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": request.content},
