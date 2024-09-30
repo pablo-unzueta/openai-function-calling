@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
 import Image from 'next/image';
 
@@ -68,8 +68,6 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +79,6 @@ export default function Home() {
       };
       setMessages([...messages, userMessage]);
       setInput('');
-      setHistoryIndex(-1);
       setIsLoading(true);
 
       try {
@@ -122,36 +119,6 @@ export default function Home() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const userMessages = messages.filter(m => m.isUser).map(m => m.text);
-    
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (historyIndex < userMessages.length - 1) {
-        const newIndex = historyIndex + 1;
-        setHistoryIndex(newIndex);
-        setInput(userMessages[userMessages.length - 1 - newIndex]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (historyIndex > -1) {
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        if (newIndex === -1) {
-          setInput('');
-        } else {
-          setInput(userMessages[userMessages.length - 1 - newIndex]);
-        }
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [input]);
-
   return (
     <main className="flex flex-col h-screen p-4 bg-white">
       <div className="flex items-center mb-4">
@@ -187,11 +154,9 @@ export default function Home() {
         </div>
         <form onSubmit={handleSend} className="flex p-4 bg-white border-t border-gray-200">
           <input
-            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
             className="flex-grow p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#ccebc5]"
             placeholder="Type your message..."
             disabled={isLoading}
