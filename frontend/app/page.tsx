@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
+import Image from 'next/image';
 
 interface Message {
   id: number;
   text: string;
   isUser: boolean;
   logging?: string[];
+  responseTime?: number;
+  imagePath?: string;  // Add this field
 }
 
 function AIMessage({ message }: { message: Message }) {
@@ -15,9 +18,27 @@ function AIMessage({ message }: { message: Message }) {
 
   return (
     <div className="flex flex-col space-y-2">
+      {message.responseTime && (
+        <div className="text-xs text-gray-500 mb-1">
+          Response time: {message.responseTime}s
+        </div>
+      )}
       <div className="flex items-start space-x-2">
-        <div className="max-w-3xl p-4 rounded-lg bg-gray-200">
-          {message.text}
+        <div className="max-w-3xl rounded-lg overflow-hidden">
+          <div className="p-4 bg-gray-200">
+            {message.text}
+          </div>
+          {message.imagePath && (
+            <div className="mt-2 bg-white p-2">
+              <Image
+                src={message.imagePath}
+                alt="Response image"
+                width={300}
+                height={200}
+                className="rounded-lg"
+              />
+            </div>
+          )}
         </div>
         {message.logging && message.logging.length > 0 && (
           <button
@@ -47,6 +68,8 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +81,7 @@ export default function Home() {
       };
       setMessages([...messages, userMessage]);
       setInput('');
+      setHistoryIndex(-1);
       setIsLoading(true);
 
       try {
@@ -80,6 +104,8 @@ export default function Home() {
           text: data.response,
           isUser: false,
           logging: data.logging,
+          responseTime: data.response_time,
+          imagePath: data.image_path || undefined  // Use undefined if image_path is null
         };
         setMessages((prevMessages) => [...prevMessages, aiMessage]);
       } catch (error) {
@@ -96,15 +122,54 @@ export default function Home() {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const userMessages = messages.filter(m => m.isUser).map(m => m.text);
+    
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (historyIndex < userMessages.length - 1) {
+        const newIndex = historyIndex + 1;
+        setHistoryIndex(newIndex);
+        setInput(userMessages[userMessages.length - 1 - newIndex]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > -1) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        if (newIndex === -1) {
+          setInput('');
+        } else {
+          setInput(userMessages[userMessages.length - 1 - newIndex]);
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [input]);
+
   return (
-    <main className="flex flex-col h-screen p-4">
-      <h1 className="text-4xl font-bold mb-4">ToddGPT</h1>
-      <div className="flex-grow flex flex-col bg-white shadow-md rounded-lg overflow-hidden">
+    <main className="flex flex-col h-screen p-4 bg-white">
+      <div className="flex items-center mb-4">
+        <Image
+          src="/images/AppIcon~ios-marketing.png"
+          alt="ToddGPT Logo"
+          width={40}
+          height={40}
+          className="mr-2 rounded-lg"  // Added rounded-lg class
+        />
+        <h1 className="text-4xl">ToddGPT</h1>
+      </div>
+      <div className="flex-grow flex flex-col bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
         <div className="flex-grow overflow-y-auto p-4">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} mb-4`}>
               {message.isUser ? (
-                <div className="max-w-3xl p-4 rounded-lg bg-blue-500 text-white">
+                <div className="max-w-3xl p-4 rounded-lg bg-[#ccebc5] text-black">
                   {message.text}
                 </div>
               ) : (
@@ -120,18 +185,20 @@ export default function Home() {
             </div>
           )}
         </div>
-        <form onSubmit={handleSend} className="flex p-4 bg-gray-100">
+        <form onSubmit={handleSend} className="flex p-4 bg-white border-t border-gray-200">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-grow p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onKeyDown={handleKeyDown}
+            className="flex-grow p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#ccebc5]"
             placeholder="Type your message..."
             disabled={isLoading}
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400"
+            className="px-4 py-2 bg-[#ccebc5] text-black rounded-r-lg hover:bg-[#b8e0a7] focus:outline-none focus:ring-2 focus:ring-[#ccebc5] disabled:bg-gray-400"
             disabled={isLoading}
           >
             Send
